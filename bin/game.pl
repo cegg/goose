@@ -22,7 +22,6 @@ our $VERSION = q[0.0.1];
 $SIG{INT} = \&signal_handler;
 $SIG{TERM} = \&signal_handler;
 
-
 our  %OPTIONS = (
   help  => qq[$PROGRAM_NAME v$VERSION
 
@@ -45,31 +44,29 @@ our  %OPTIONS = (
 
   GetOptions($opts_parsed, @opt_keys);
 
-  my @options =  keys %{$opts_parsed};
-
-  for my $opt (keys %{$opts_parsed}) { #user is learning
-    print "$opt: $opts_parsed->{$opt}\n";
-    if(defined $opts_parsed->{$opt}) {
-      print_option($OPTIONS{$opt});
+  my @options_startup =  keys %{$opts_parsed};
+  if (scalar @options_startup) {
+    for my $opt (sort @options_startup) { #user is learning how to run the script
+      print "$opt: $opts_parsed->{$opt}\n";
+      if(defined $opts_parsed->{$opt}) {
+        print_option($OPTIONS{$opt});
+      }
     }
+    exit;
   }
-
   reset_game(); #typically that would be called "init", but I use it also for cleanup after the end
   main();
 
 
 sub main {
 
+  my $players = [];
+  my $player_active;
+  my $player_inactive;
   while (1) {
     print 'enter command: ';
     my $user_input_string = <STDIN>;
-    my $user_input = [];
-    @{$user_input} = split /(?:\s|,)+/, $user_input_string;
-    # foreach my $z  (@{$user_input}) {
-    #   print "INPUT=$z\n";
-    # }
-
-    my $args = parse_args($user_input);
+    my $args = parse_args($user_input_string);
 
     if ($args->{error}) {
       print $args->{error};
@@ -77,7 +74,41 @@ sub main {
     }
     #print Dumper($args);
 
-
+    if ($args->{action} eq q[add]) {
+      if (scalar  @{$players} < 2) {
+        if (defined $players->[0] && $players->[0]->name eq $args->{player} ) {
+          print qq[$args->{player}: already existing player\n];
+        } else {
+          push @{$players}, new player($args->{player});
+          $player->position(1);
+          print q[players: ]; {foreach  (@{$players}) { print $_->name() . q[ ] }}; print qq[\n];
+          print q[position: ]; {foreach  (@{$players}) { print $_->position() . q[ ] }}; print qq[\n];
+          # print qq[pushing $args->{player}\n];
+        }
+      } else {
+        print qq[there are already two players. you can start moving them now\n];
+      }
+    } elsif ($args->{action} eq q[move]) {
+      if (scalar  @{$players} < 2) {
+        print q[add the second player first];
+      } else {
+        my $player;
+        if ($args->{player} == $players->[0]->name) {
+          $player_active = $players->[0];
+          $player_inactive = $players->[1]
+        } elsif ($args->{player} == $players->[1]->name) {
+          $player_active = $players->[1];
+          $player_inactive = $players->[0];
+        } else {
+          print join qq[player $args->{player} does not exist. available are: ], { foreach  (@{$players}) { print $_->name() . q[ ] } },  qq[\n];
+          next;
+        }
+        if (defined $args->{roll_1}) {
+          $args->{target_position} = $player_active->position + $args->{roll_1} + $args->{roll_2};
+          print join qq[$args->{player} rolls $args->{roll_1, $args->{roll_2. ],   $player->name,  qq[ moves from ], $player->position,  qq[ to $args->{target_position}]];
+        }
+      }
+    }
   }
   return;
 }
@@ -89,7 +120,14 @@ sub print_option { #just a placeholder in case if fancier formatting will be int
 }
 
 sub parse_args {
-  my ($items) = @_;
+  my $user_input_string = shift;
+
+  my $items = [];
+  @{$items} = split /(?:\s|,)+/, $user_input_string;
+  # foreach my $z  (@{$items}) {
+  #   print "INPUT=$z\n";
+  # }
+
   my $args = {};
 
   if (($items->[0] eq q[add]) && ($items->[1] eq q[player])) {
@@ -137,6 +175,7 @@ sub parse_args {
 
 sub signal_handler {
   reset_game();
+  print "exiting\n";
   exit;
 }
 

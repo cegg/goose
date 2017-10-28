@@ -12,17 +12,18 @@ use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
 
-our %rules = {};
+our $rules = {a => 1};
 
 
-sub init {
-  my $self     = shift;
-
-
-  return;
+sub new {
+  my $class = shift;
+  my $self  = {
+                name => shift,
+              };
+  return bless $self, $class;
 }
 
-sub create {
+sub save {
   my $self     = shift;
 
   return;
@@ -39,7 +40,6 @@ sub move {
 sub name {
   my $self = shift;
   my $name = shift;
-
   if (defined $name && $name) {
     $self->{name} = $name;
   }
