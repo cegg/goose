@@ -118,7 +118,7 @@ ITER:  while (1) {
         if (!defined $args->{roll_1}) { # move on generated dice roll
           $args->{roll_1} = int(rand(5))+1;
           $args->{roll_2} = int(rand(5))+1;
-          print "generated $args->{roll_1}, $args->{roll_2}\n";
+          #print "generated $args->{roll_1}, $args->{roll_2}\n";
         }
 
         $args->{target_position} = $player_active->position + $args->{roll_1} + $args->{roll_2};
@@ -129,11 +129,30 @@ ITER:  while (1) {
           $player_active->position,
           qq[to $args->{target_position}\n]
         );
-
+        $player_active->position($args->{target_position});
+        print_state($players, $player_active);
       }
     }
   }
   return;
+}
+
+
+sub print_state {
+  my $players = shift;
+  my $player_active = shift;
+  print q[|];
+  for my $cell (1..63) {
+    if ($cell == $players->[0]->position) { #TODO : not scalable for more players, a loop migh suffice instead
+      print $players->[0]->name;
+    } elsif ($cell == $players->[1]->position) {
+      print $players->[1]->name;
+    } else {
+      print qq[$cell];
+    }
+    print q[|];
+  }
+  print qq[\n];
 }
 
 sub print_option { #just a placeholder in case if fancier formatting will be introduced
