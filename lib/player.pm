@@ -54,7 +54,7 @@ sub position {
   if (defined $position && $position) {
     $self->{position} = $position;
   }
-  return;
+  return $self->{position};
 }
 
 =head1 NAME

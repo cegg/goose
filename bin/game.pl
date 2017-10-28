@@ -63,7 +63,7 @@ sub main {
   my $players = [];
   my $player_active;
   my $player_inactive;
-  while (1) {
+ITER:  while (1) {
     print 'enter command: ';
     my $user_input_string = <STDIN>;
     my $args = parse_args($user_input_string);
@@ -78,35 +78,58 @@ sub main {
       if (scalar  @{$players} < 2) {
         if (defined $players->[0] && $players->[0]->name eq $args->{player} ) {
           print qq[$args->{player}: already existing player\n];
+          next ITER;
         } else {
           push @{$players}, new player($args->{player});
-          $player->position(1);
+          ${$players}[$#{$players}]->position(1);
           print q[players: ]; {foreach  (@{$players}) { print $_->name() . q[ ] }}; print qq[\n];
-          print q[position: ]; {foreach  (@{$players}) { print $_->position() . q[ ] }}; print qq[\n];
+          next ITER;
+          #print q[position: ]; {foreach  (@{$players}) { print $_->position() . q[ ] }}; print qq[\n];
           # print qq[pushing $args->{player}\n];
         }
       } else {
         print qq[there are already two players. you can start moving them now\n];
+        next ITER;
       }
     } elsif ($args->{action} eq q[move]) {
       if (scalar  @{$players} < 2) {
-        print q[add the second player first];
+        print qq[add the second player before moving anybody\n];
+        next ITER;
       } else {
-        my $player;
-        if ($args->{player} == $players->[0]->name) {
+        if ($args->{player} eq $players->[0]->name) {
           $player_active = $players->[0];
           $player_inactive = $players->[1]
-        } elsif ($args->{player} == $players->[1]->name) {
+        } elsif ($args->{player} eq $players->[1]->name) {
           $player_active = $players->[1];
           $player_inactive = $players->[0];
         } else {
-          print join qq[player $args->{player} does not exist. available are: ], { foreach  (@{$players}) { print $_->name() . q[ ] } },  qq[\n];
-          next;
+          my $available;
+          foreach  (@{$players}) {
+            $available .= ($_->name() . q[ ]);
+          }
+          print join q[ ], (
+              qq[player $args->{player} does not exist. available are: ],
+              $available,
+              qq[\n]
+              );
+          next ITER;
         }
-        if (defined $args->{roll_1}) {
-          $args->{target_position} = $player_active->position + $args->{roll_1} + $args->{roll_2};
-          print join qq[$args->{player} rolls $args->{roll_1, $args->{roll_2. ],   $player->name,  qq[ moves from ], $player->position,  qq[ to $args->{target_position}]];
+
+        if (!defined $args->{roll_1}) { # move on generated dice roll
+          $args->{roll_1} = int(rand(5))+1;
+          $args->{roll_2} = int(rand(5))+1;
+          print "generated $args->{roll_1}, $args->{roll_2}\n";
         }
+
+        $args->{target_position} = $player_active->position + $args->{roll_1} + $args->{roll_2};
+        print join q[ ], (
+          qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
+          $player_active->name,
+          qq[moves from],
+          $player_active->position,
+          qq[to $args->{target_position}\n]
+        );
+
       }
     }
   }
