@@ -12,8 +12,16 @@ use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
 
-our $rules = {a => 1};
+our $magic_numbers = {
+  win => 63,
+  goose_end => 27
+};
 
+our @ISA = qw(Exporter);
+
+our @EXPORT_OK = qw(
+                    $magic_numbers
+                    );
 
 sub new {
   my $class = shift;
@@ -44,7 +52,6 @@ sub name {
     $self->{name} = $name;
   }
   return $self->{name};
-
 }
 
 sub position {
@@ -55,6 +62,50 @@ sub position {
     $self->{position} = $position;
   }
   return $self->{position};
+}
+
+sub apply_rules {
+  my $self = shift;
+  if ($self->position >= $magic_numbers->{win}) {
+     return 1;
+  } elsif ($self->position == 6) { # totally random jump
+    return 12;
+  } else {
+    my $goose = [];
+    my $x = 0;
+    my $y = 5;
+    my $index = 0;
+#TODO externalize and cache this generator
+    while ($x+$y <= $magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
+      $x += $y;
+      push @{$goose}, $x;
+      $index += 1;
+      if ($index % 2) {
+        --$y;
+      } else {
+        ++$y;
+      }
+
+    }
+    print "goose: @{$goose}\n";
+    foreach my $goose (@{$goose}) {
+      if ($self->position == $goose) {
+        return $self->position  + $self->roll_sum;
+        last;
+      }
+    }
+
+  }
+  return 0;
+}
+
+sub roll_sum {
+  my $self = shift;
+  my $roll_sum = shift;
+  if (defined $roll_sum && $roll_sum) {
+    $self->{roll_sum} = $roll_sum;
+  }
+  return $self->{roll_sum};
 }
 
 =head1 NAME
@@ -71,13 +122,15 @@ $LastChangedRevision$
 
 =head1 SUBROUTINES/METHODS
 
-=head2 init - instantiate player object
+=head2 new - instantiate player object
 
-=head2 create
+=head2 move - move player to the new position
 
-=head2 move
+=head2 position - returns current position of the user; sets if a value passed
 
-=head2 position - returns current position of the user
+=head2 roll_sum - sums up first and second dice rolls
+
+=head2 apply_rules - checks if currnet postition requires further movements according to the rules of the game
 
 =head1 INCOMPATIBILITIES
 

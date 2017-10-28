@@ -37,7 +37,6 @@ our  %OPTIONS = (
   rules => q[all the rules about special positions...],
 );
 
-
   my $opts_parsed = {};
 
   my @opt_keys = keys %OPTIONS;
@@ -121,7 +120,8 @@ ITER:  while (1) {
           #print "generated $args->{roll_1}, $args->{roll_2}\n";
         }
 
-        $args->{target_position} = $player_active->position + $args->{roll_1} + $args->{roll_2};
+        $player_active->roll_sum($args->{roll_1} + $args->{roll_2});
+        $args->{target_position} = $player_active->position + $player_active->roll_sum;
         print join q[ ], (
           qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
           $player_active->name,
@@ -130,7 +130,19 @@ ITER:  while (1) {
           qq[to $args->{target_position}\n]
         );
         $player_active->position($args->{target_position});
+        my $state = $player_active->apply_rules;
         print_state($players, $player_active);
+
+        if ($state == 1) {
+          print join q[ ], ($player_active->name, qq[wins!\n]);
+          last ITER;
+        } elsif ($state) {
+          $player_active->position($state);
+          print join q[ ], ($player_active->name, q[ moves again to ], $player_active->position() , qq[\n]);
+        }
+
+        print_state($players, $player_active);
+
       }
     }
   }
@@ -142,7 +154,7 @@ sub print_state {
   my $players = shift;
   my $player_active = shift;
   print q[|];
-  for my $cell (1..63) {
+  for my $cell (1..$player::magic_numbers->{win}) {
     if ($cell == $players->[0]->position) { #TODO : not scalable for more players, a loop migh suffice instead
       print $players->[0]->name;
     } elsif ($cell == $players->[1]->position) {
