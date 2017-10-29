@@ -13,8 +13,10 @@ use English qw(-no_match_vars);
 our $VERSION = q[0.0.1];
 
 our $magic_numbers = {
-  win => 63,
-  goose_end => 27
+  win           => 63,
+  goose_end     => 27,
+  bridge        => 6,
+  bridge_target => 12
 };
 
 our @ISA = qw(Exporter);
@@ -22,39 +24,6 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
                     $magic_numbers
                     );
-
-# BEGIN {
-#    our $goose = [];
-#     my $x = 0;
-#     my $y = 5;
-#     my $index = 0;
-# print "STARTING GOOSE\n";
-#     while ($x+$y <= $player::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
-#       $x += $y;
-#       push @{$goose}, $x;
-#       $index += 1;
-#       ($index % 2) ? --$y : ++$y;
-#     }
-#     print ref $goose . "\n";
-# }
-
-# our $generate_goose_cells_list = sub {
-#   print "ASDF\n";
-#     my $goose = [];
-#     my $x = 0;
-#     my $y = 5;
-#     my $index = 0;
-# print "STARTING GOOSE\n";
-#     while ($x+$y <= $player::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
-#       $x += $y;
-#       push @{$goose}, $x;
-#       $index += 1;
-#       ($index % 2) ? --$y : ++$y;
-#     }
-#     print ref $goose . "\n";
-#   return $goose;
-#   };
-
 
 sub new {
   my $class = shift;
@@ -106,15 +75,18 @@ sub previous_position {
 
 sub apply_rules {
   my $self = shift;
-  if ($self->position >= $magic_numbers->{win}) {
-     return $magic_numbers->{win};
-  } elsif ($self->position == 6) { # totally random jump
-    return 12;
+
+  $self->clear_stops;
+  if ($self->position >= $player::magic_numbers->{win}) {
+    $self->add_stop($player::magic_numbers->{win});
+    return [$magic_numbers->{win}];
+  } elsif ($self->position == $player::magic_numbers->{bridge}) { # totally random jump
+    $self->add_stop($player::magic_numbers->{bridge});
+    $self->add_stop($player::magic_numbers->{bridge_target});
+    $self->position($player::magic_numbers->{bridge_target});
+    return $self->stops;
   } else {
     return $self->check_goose_cells($self->position);
-
-
-
   }
   return 0;
 }
@@ -123,17 +95,33 @@ sub check_goose_cells {
   my $self = shift;
   my $position = shift;
   $self->position($position);
-#  push @{$self->{stops}} , $self->position;
+  $self->add_stop($self->position);
+
   foreach my $goose (@{$main::goose_cells}) { # goose cell - repeat
     if ($position == $goose) {
-      print "goose jump to " . ($position + $self->roll_sum) . "\n";
-
       $self->check_goose_cells($position + $self->roll_sum);
       last;
     }
   }
-      return $self->position;
-  return 0;
+  return $self->stops;
+}
+
+sub stops {
+  my $self = shift;
+  return $self->{stops};
+}
+
+sub add_stop {
+  my $self = shift;
+  my $stop = shift;
+  push @{$self->{stops}}, $stop;
+  return;
+}
+
+sub clear_stops {
+  my $self = shift;
+  $self->{stops} = [];
+  return;
 }
 
 sub roll_sum {
@@ -143,6 +131,41 @@ sub roll_sum {
     $self->{roll_sum} = $roll_sum;
   }
   return $self->{roll_sum};
+}
+
+sub compose_message {
+  my $self = shift;
+  my $stops = shift;
+  my $msg = q[];
+
+  # if ($stops->[0] >= $player::magic_numbers->{win}) { # 63
+  #   $msg =  join q[ ], ($self->name, qq[wins!\n\n]);
+
+  if (scalar @{$stops}) { # random jumps, second roll. special wording about the bridge
+    if ((scalar @{$stops} == 2) && ($stops->[0] == $player::magic_numbers->{bridge}) && ($stops->[1] == $player::magic_numbers->{bridge_target})) {
+      $msg = join q[ ], (
+                          $self->name, qq[ moves to the Bridge.],
+                          $self->name, qq[jumps to ], $self->position
+                        );
+    } else {
+      my $stop_counter = 0;
+
+      foreach my $stop (@{$stops}) {
+        my $again = q[];
+        if ($stop_counter > 0) {
+          $again = q[again and goes];
+        } else {
+           $again = q[];
+        }
+
+        $msg .= q[ ] . join q[ ], (
+                            $self->name, qq[moves $again to $stop.]
+                          );
+        $stop_counter++;
+      }
+    }
+  }
+  return $msg;
 }
 
 =head1 NAME
@@ -168,6 +191,8 @@ $LastChangedRevision$
 =head2 roll_sum - sums up first and second dice rolls
 
 =head2 apply_rules - checks if currnet postition requires further movements according to the rules of the game
+
+=head2 compose_message - turn final state description
 
 =head1 INCOMPATIBILITIES
 

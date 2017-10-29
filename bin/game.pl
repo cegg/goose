@@ -48,7 +48,6 @@ our  %OPTIONS = (
   my @options_startup =  keys %{$opts_parsed};
   if (scalar @options_startup) {
     for my $opt (sort @options_startup) { #user is learning how to run the script
-      print "$opt: $opts_parsed->{$opt}\n";
       if(defined $opts_parsed->{$opt}) {
         print_option($OPTIONS{$opt});
       }
@@ -56,7 +55,6 @@ our  %OPTIONS = (
     exit;
   }
 
-  #reset_game(); #typically that would be called "init", but I use it also for cleanup after the end
   main();
 
 
@@ -96,7 +94,10 @@ ITER:  while (1) {
         next ITER;
       }
     } elsif ($args->{action} eq q[move]) {
-      if (scalar  @{$players} < 2) {
+      if (scalar  @{$players} < 1) {
+        print qq[add the first player before moving anybody\n];
+        next ITER;
+      } elsif (scalar  @{$players} < 2) {
         print qq[add the second player before moving anybody\n];
         next ITER;
       } elsif (defined $player_active
@@ -128,6 +129,7 @@ ITER:  while (1) {
               );
           next ITER;
         }
+        # user errors end here and the game can start
 
         if (!defined $args->{roll_1}) { # move on generated dice roll
           $args->{roll_1} = int(rand(5)) + 1;
@@ -137,34 +139,22 @@ ITER:  while (1) {
         $player_active->previous_position($player_active->position);
         $player_active->roll_sum($args->{roll_1} + $args->{roll_2});
         $args->{target_position} = $player_active->position + $player_active->roll_sum;
-        print join q[ ], (
-          qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
-          $player_active->name,
-          q[moves from],
-          $player_active->position,
-          qq[to $args->{target_position}\n]
-        );
         $player_active->position($args->{target_position});
-        my $state = $player_active->apply_rules;
-        print_state($players, $player_active);
+        my $stops = $player_active->apply_rules;
 
-        if ($state == $player::magic_numbers->{win}) { # 63
-          print join q[ ], ($player_active->name, qq[wins!\n\n]);
-          last ITER;
-        } elsif ($state) { # random jumps, overlap, second roll
-          $player_active->position($state);
+        if ($stops->[0] >= $player::magic_numbers->{win}) { # 63
           print join q[ ], (
-                              $player_active->name,
-                              q[ moves again to ],
-                              $player_active->position ,
-                              qq[\n]
-                            );
-          print_state($players, $player_active);
+                            $player_active->name, qq[moves to $player::magic_numbers->{win}.], $player_active->name, qq[wins!\n]
+                          );
+
+          print qq[GAME OVER\n];
+          exit; # no point to continue to prank
         }
 
+        my $msg_prank = q[];
         if ($player_active->position == $player_inactive->position) { # prank
-          print join q[ ],  (
-                              q[on ],
+          $msg_prank =  join q[ ],  (
+                              q[on],
                               $player_active->position,
                               q[there is],
                               $player_active->name,
@@ -173,31 +163,38 @@ ITER:  while (1) {
                               qq[\n]
                             );
           $player_inactive->position($player_active->previous_position);
-          print_state($players, $player_active);
         }
 
+
+        print_board($players, $player_active);
+        print join q[ ], (
+                          qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}. ],
+                          $player_active->compose_message($stops),
+                          $msg_prank,
+                          qq[\n]
+                        );
       }
     }
   }
   return;
 }
 
-
-sub print_state {
+sub print_board { #debug tool
   my $players = shift;
   my $player_active = shift;
   print q[|];
   for my $cell (1..$player::magic_numbers->{win}) {
     if ($cell == $players->[0]->position) { #TODO : not scalable for more players, a loop migh suffice instead
-      print $players->[0]->name;
+      print q[ <] . $players->[0]->name . q[> ];
     } elsif ($cell == $players->[1]->position) {
-      print $players->[1]->name;
+      print q[ <] . $players->[1]->name . q[> ];
     } else {
       print qq[$cell];
     }
     print q[|];
   }
   print qq[\n];
+  return;
 }
 
 sub print_option { #just a placeholder in case if fancier formatting will be introduced
@@ -211,9 +208,6 @@ sub parse_args {
 
   my $items = [];
   @{$items} = split /(?:\s|,)+/, $user_input_string;
-  # foreach my $z  (@{$items}) {
-  #   print "INPUT=$z\n";
-  # }
 
   my $args = {};
 
@@ -240,17 +234,6 @@ sub parse_args {
           $args->{ 'roll_' . ++$index } = $roll;
         }
       }
-
-      # foreach my $roll (@{$items}[2..3]) {
-      #   my $is_between = (sort {$a <=> $b} $lower, $upper, $roll)[1] == $roll;
-      #   #printf "$roll is%s between $lower and $upper\n", $is_between ? "" : " not";
-      #   if (!$is_between) {
-      #     $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
-      #     last;
-      #   } else {
-      #     $args->{"roll$roll"} = $roll;
-      #   }
-      # }
     } else {
       $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
     }
@@ -264,21 +247,8 @@ sub parse_args {
 }
 
 sub signal_handler {
-  reset_game();
   print "exiting\n";
   exit;
-}
-
-sub reset_game {
-  my $dir = q[database];
-  if (!-d $dir) {
-    eval {
-      make_path($dir);
-    } or do {
-      croak qq[Could not create directory $dir: $EVAL_ERROR];
-    }
-  }
-  return;
 }
 
 sub get_goose_cells_list {
@@ -313,13 +283,13 @@ $LastChangedRevision$
 
 =head2 parse_args - parse user input command
 
-=head2 reset_game - remove users that were created during the game; makes sure database dir exist
-
 =head2 print_option - prints help option specified by the user from the command line
 
 =head2 signal_handler - signla handled, Ctrl+C , etc
 
 =head2 get_goose_cells_list - generates sequence 5, 9, 14, 18, 23, 27
+
+=head2 print_board
 
 =head1 INCOMPATIBILITIES
 
