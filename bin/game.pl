@@ -65,11 +65,14 @@ sub main {
 ITER:  while (1) {
     print 'enter command: ';
     my $user_input_string = <STDIN>;
+    $user_input_string =~ s/^\W+//smx;
+    $user_input_string =~ s/\W+$//smx;
     my $args = parse_args($user_input_string);
 
     if ($args->{error}) {
       print $args->{error};
       print_option($OPTIONS{help});
+      next ITER;
     }
     #print Dumper($args);
 
@@ -120,6 +123,7 @@ ITER:  while (1) {
           #print "generated $args->{roll_1}, $args->{roll_2}\n";
         }
 
+        $player_active->previous_position($player_active->position);
         $player_active->roll_sum($args->{roll_1} + $args->{roll_2});
         $args->{target_position} = $player_active->position + $player_active->roll_sum;
         print join q[ ], (
@@ -138,10 +142,15 @@ ITER:  while (1) {
           last ITER;
         } elsif ($state) {
           $player_active->position($state);
-          print join q[ ], ($player_active->name, q[ moves again to ], $player_active->position() , qq[\n]);
+          print join q[ ], ($player_active->name, q[ moves again to ], $player_active->position , qq[\n]);
+          print_state($players, $player_active);
         }
 
-        print_state($players, $player_active);
+        if ($player_active->position == $player_inactive->position) { # prank
+          print join q[ ], (q[on ], $player_active->position, q[there is], $player_active->name, q[, who returns to ], $player_active->previous_position , qq[\n]);
+          $player_inactive->position($player_active->previous_position);
+          print_state($players, $player_active);
+        }
 
       }
     }
@@ -184,7 +193,10 @@ sub parse_args {
 
   my $args = {};
 
-  if (($items->[0] eq q[add]) && ($items->[1] eq q[player])) {
+  if (($items->[0] eq q[add])
+      && defined $items->[1]
+      && ($items->[1] eq q[player])
+      && defined $items->[2]) {
     $args->{action} = $items->[0];
     $args->{player} = $items->[2];
   } elsif ($items->[0] eq q[move]) {

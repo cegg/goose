@@ -64,6 +64,17 @@ sub position {
   return $self->{position};
 }
 
+
+sub previous_position {
+  my $self     = shift;
+  my $previous_position = shift;
+
+  if (defined $previous_position && $previous_position) {
+    $self->{previous_position} = $previous_position;
+  }
+  return $self->{previous_position};
+}
+
 sub apply_rules {
   my $self = shift;
   if ($self->position >= $magic_numbers->{win}) {
