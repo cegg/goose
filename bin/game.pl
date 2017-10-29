@@ -37,6 +37,8 @@ our  %OPTIONS = (
   rules => q[all the rules about special positions...],
 );
 
+  our $goose_cells = get_goose_cells_list();
+
   my $opts_parsed = {};
 
   my @opt_keys = keys %OPTIONS;
@@ -53,7 +55,8 @@ our  %OPTIONS = (
     }
     exit;
   }
-  reset_game(); #typically that would be called "init", but I use it also for cleanup after the end
+
+  #reset_game(); #typically that would be called "init", but I use it also for cleanup after the end
   main();
 
 
@@ -62,8 +65,9 @@ sub main {
   my $players = [];
   my $player_active;
   my $player_inactive;
+
 ITER:  while (1) {
-    print 'enter command: ';
+    print q[enter command >> ];
     my $user_input_string = <STDIN>;
     $user_input_string =~ s/^\W+//smx;
     $user_input_string =~ s/\W+$//smx;
@@ -83,11 +87,9 @@ ITER:  while (1) {
           next ITER;
         } else {
           push @{$players}, new player($args->{player});
-          ${$players}[$#{$players}]->position(1);
+          ${$players}[$#{$players}]->position(0);
           print q[players: ]; {foreach  (@{$players}) { print $_->name() . q[ ] }}; print qq[\n];
           next ITER;
-          #print q[position: ]; {foreach  (@{$players}) { print $_->position() . q[ ] }}; print qq[\n];
-          # print qq[pushing $args->{player}\n];
         }
       } else {
         print qq[there are already two players. you can start moving them now\n];
@@ -97,6 +99,16 @@ ITER:  while (1) {
       if (scalar  @{$players} < 2) {
         print qq[add the second player before moving anybody\n];
         next ITER;
+      } elsif (defined $player_active
+          && ($args->{player} eq $player_active->name)) {
+        print join q[ ], (
+          qq["$args->{player}"],
+          q[just moved. it's turn of],
+          q["] . $player_inactive->name . q["],
+          qq["\n]
+        );
+        next ITER;
+
       } else {
         if ($args->{player} eq $players->[0]->name) {
           $player_active = $players->[0];
@@ -118,9 +130,8 @@ ITER:  while (1) {
         }
 
         if (!defined $args->{roll_1}) { # move on generated dice roll
-          $args->{roll_1} = int(rand(5))+1;
-          $args->{roll_2} = int(rand(5))+1;
-          #print "generated $args->{roll_1}, $args->{roll_2}\n";
+          $args->{roll_1} = int(rand(5)) + 1;
+          $args->{roll_2} = int(rand(5)) + 1;
         }
 
         $player_active->previous_position($player_active->position);
@@ -129,7 +140,7 @@ ITER:  while (1) {
         print join q[ ], (
           qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
           $player_active->name,
-          qq[moves from],
+          q[moves from],
           $player_active->position,
           qq[to $args->{target_position}\n]
         );
@@ -137,17 +148,30 @@ ITER:  while (1) {
         my $state = $player_active->apply_rules;
         print_state($players, $player_active);
 
-        if ($state == 1) {
-          print join q[ ], ($player_active->name, qq[wins!\n]);
+        if ($state == $player::magic_numbers->{win}) { # 63
+          print join q[ ], ($player_active->name, qq[wins!\n\n]);
           last ITER;
-        } elsif ($state) {
+        } elsif ($state) { # random jumps, overlap, second roll
           $player_active->position($state);
-          print join q[ ], ($player_active->name, q[ moves again to ], $player_active->position , qq[\n]);
+          print join q[ ], (
+                              $player_active->name,
+                              q[ moves again to ],
+                              $player_active->position ,
+                              qq[\n]
+                            );
           print_state($players, $player_active);
         }
 
         if ($player_active->position == $player_inactive->position) { # prank
-          print join q[ ], (q[on ], $player_active->position, q[there is], $player_active->name, q[, who returns to ], $player_active->previous_position , qq[\n]);
+          print join q[ ],  (
+                              q[on ],
+                              $player_active->position,
+                              q[there is],
+                              $player_active->name,
+                              q[, who returns to ],
+                              $player_active->previous_position ,
+                              qq[\n]
+                            );
           $player_inactive->position($player_active->previous_position);
           print_state($players, $player_active);
         }
@@ -257,7 +281,19 @@ sub reset_game {
   return;
 }
 
-
+sub get_goose_cells_list {
+    my $goose = [];
+    my $x = 0;
+    my $y = 5;
+    my $index = 0;
+    while ($x+$y <= $player::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
+      $x += $y;
+      push @{$goose}, $x;
+      $index += 1;
+      ($index % 2) ? --$y : ++$y;
+    }
+  return $goose;
+}
 
 
 
@@ -282,6 +318,8 @@ $LastChangedRevision$
 =head2 print_option - prints help option specified by the user from the command line
 
 =head2 signal_handler - signla handled, Ctrl+C , etc
+
+=head2 get_goose_cells_list - generates sequence 5, 9, 14, 18, 23, 27
 
 =head1 INCOMPATIBILITIES
 

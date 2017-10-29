@@ -23,19 +23,48 @@ our @EXPORT_OK = qw(
                     $magic_numbers
                     );
 
+# BEGIN {
+#    our $goose = [];
+#     my $x = 0;
+#     my $y = 5;
+#     my $index = 0;
+# print "STARTING GOOSE\n";
+#     while ($x+$y <= $player::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
+#       $x += $y;
+#       push @{$goose}, $x;
+#       $index += 1;
+#       ($index % 2) ? --$y : ++$y;
+#     }
+#     print ref $goose . "\n";
+# }
+
+# our $generate_goose_cells_list = sub {
+#   print "ASDF\n";
+#     my $goose = [];
+#     my $x = 0;
+#     my $y = 5;
+#     my $index = 0;
+# print "STARTING GOOSE\n";
+#     while ($x+$y <= $player::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
+#       $x += $y;
+#       push @{$goose}, $x;
+#       $index += 1;
+#       ($index % 2) ? --$y : ++$y;
+#     }
+#     print ref $goose . "\n";
+#   return $goose;
+#   };
+
+
 sub new {
   my $class = shift;
   my $self  = {
                 name => shift,
               };
+
   return bless $self, $class;
 }
 
-sub save {
-  my $self     = shift;
-
-  return;
-}
 
 sub move {
   my $self     = shift;
@@ -58,7 +87,7 @@ sub position {
   my $self     = shift;
   my $position = shift;
 
-  if (defined $position && $position) {
+  if (defined $position && $position ne q[]) { # check for q[] accomoodates possible zero
     $self->{position} = $position;
   }
   return $self->{position};
@@ -69,7 +98,7 @@ sub previous_position {
   my $self     = shift;
   my $previous_position = shift;
 
-  if (defined $previous_position && $previous_position) {
+  if (defined $previous_position && $previous_position ne q[]) { # check for q[] accomoodates possible zero
     $self->{previous_position} = $previous_position;
   }
   return $self->{previous_position};
@@ -78,35 +107,32 @@ sub previous_position {
 sub apply_rules {
   my $self = shift;
   if ($self->position >= $magic_numbers->{win}) {
-     return 1;
+     return $magic_numbers->{win};
   } elsif ($self->position == 6) { # totally random jump
     return 12;
   } else {
-    my $goose = [];
-    my $x = 0;
-    my $y = 5;
-    my $index = 0;
-#TODO externalize and cache this generator
-    while ($x+$y <= $magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
-      $x += $y;
-      push @{$goose}, $x;
-      $index += 1;
-      if ($index % 2) {
-        --$y;
-      } else {
-        ++$y;
-      }
+    return $self->check_goose_cells($self->position);
 
-    }
-    print "goose: @{$goose}\n";
-    foreach my $goose (@{$goose}) {
-      if ($self->position == $goose) {
-        return $self->position  + $self->roll_sum;
-        last;
-      }
-    }
+
 
   }
+  return 0;
+}
+
+sub check_goose_cells {
+  my $self = shift;
+  my $position = shift;
+  $self->position($position);
+#  push @{$self->{stops}} , $self->position;
+  foreach my $goose (@{$main::goose_cells}) { # goose cell - repeat
+    if ($position == $goose) {
+      print "goose jump to " . ($position + $self->roll_sum) . "\n";
+
+      $self->check_goose_cells($position + $self->roll_sum);
+      last;
+    }
+  }
+      return $self->position;
   return 0;
 }
 
