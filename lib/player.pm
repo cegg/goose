@@ -62,6 +62,15 @@ sub position {
   return $self->{position};
 }
 
+sub target_position {
+  my $self     = shift;
+  my $target_position = shift;
+
+  if (defined $target_position && $target_position ne q[]) { # check for q[] accomoodates possible zero
+    $self->{target_position} = $target_position;
+  }
+  return $self->{target_position};
+}
 
 sub previous_position {
   my $self     = shift;

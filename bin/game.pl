@@ -138,8 +138,8 @@ ITER:  while (1) {
 
         $player_active->previous_position($player_active->position);
         $player_active->roll_sum($args->{roll_1} + $args->{roll_2});
-        $args->{target_position} = $player_active->position + $player_active->roll_sum;
-        $player_active->position($args->{target_position});
+        $player_active->target_position($player_active->position + $player_active->roll_sum);
+        $player_active->position($player_active->target_position);
         my $stops = $player_active->apply_rules;
 
         if ($stops->[0] >= $player::magic_numbers->{win}) { # 63
@@ -238,7 +238,6 @@ sub parse_args {
       $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
     }
   } elsif ($items->[0] eq q[exit] || $items->[0] eq q[quit]) {
-    reset_game();
     exit;
   } else {
     $args->{error} = qq[command should start with either "add player" or "move", follwed by player's name\n];
