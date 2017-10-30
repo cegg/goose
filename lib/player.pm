@@ -9,18 +9,7 @@ use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
 
-our $magic_numbers = {
-  win           => 63,
-  goose_end     => 27,
-  bridge        => 6,
-  bridge_target => 12
-};
 
-our @ISA = qw(Exporter);
-
-our @EXPORT_OK = qw(
-                    $magic_numbers
-                    );
 
 sub new {
   my $class = shift;
@@ -83,16 +72,16 @@ sub apply_rules {
   my $self = shift;
 
   $self->clear_stops;
-  if ($self->position >= $player::magic_numbers->{win}) {
-    $self->add_stop($player::magic_numbers->{win});
-    return [$magic_numbers->{win}];
-  } elsif ($self->position == $player::magic_numbers->{bridge}) { # totally random jump
-    $self->add_stop($player::magic_numbers->{bridge});
-    $self->add_stop($player::magic_numbers->{bridge_target});
-    $self->position($player::magic_numbers->{bridge_target});
+  if ($self->position >= $game::magic_numbers->{win}) {
+    $self->add_stop($game::magic_numbers->{win});
+    return [$game::magic_numbers->{win}];
+  } elsif ($self->position == $game::magic_numbers->{bridge}) { # totally random jump
+    $self->add_stop($game::magic_numbers->{bridge});
+    $self->add_stop($game::magic_numbers->{bridge_target});
+    $self->position($game::magic_numbers->{bridge_target});
     return $self->stops;
   } else {
-    return $self->check_goose_cells($self->position);
+    return $self->check_goose_cells($self->position); # recursive check for further jumps
   }
   return 0;
 }
@@ -144,11 +133,8 @@ sub compose_message {
   my $stops = shift;
   my $msg = q[];
 
-  # if ($stops->[0] >= $player::magic_numbers->{win}) { # 63
-  #   $msg =  join q[ ], ($self->name, qq[wins!\n\n]);
-
   if (scalar @{$stops}) { # random jumps, second roll. special wording about the bridge
-    if ((scalar @{$stops} == 2) && ($stops->[0] == $player::magic_numbers->{bridge}) && ($stops->[1] == $player::magic_numbers->{bridge_target})) {
+    if ((scalar @{$stops} == 2) && ($stops->[0] == $game::magic_numbers->{bridge}) && ($stops->[1] == $game::magic_numbers->{bridge_target})) {
       $msg = join q[ ], (
                           $self->name, qq[ moves to the Bridge.],
                           $self->name, qq[jumps to ], $self->position
