@@ -5,21 +5,22 @@ use warnings;
 use DateTime;
 use Getopt::Long;
 use English qw(-no_match_vars);
-use Carp;
 #use lib qw(../lib /opt/goose/lib); # if I get to to the point of making proper deb
-use Data::Dumper;
-use Readonly;
 use Cwd qw(getcwd);
 use File::Path qw(make_path);
 
 use FindBin; # might or might not be installed
 use File::Spec;
 use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
+
+use Carp;
+use Data::Dumper;
+
 use player;
 
 our $VERSION = q[0.0.1];
 
-$SIG{INT} = \&signal_handler;
+$SIG{INT}  = \&signal_handler;
 $SIG{TERM} = \&signal_handler;
 
 our  %OPTIONS = (
@@ -106,7 +107,7 @@ ITER:  while (1) {
           qq["$args->{player}"],
           q[just moved. it's turn of],
           q["] . $player_inactive->name . q["],
-          qq["\n]
+          qq[\n]
         );
         next ITER;
 
@@ -166,9 +167,9 @@ ITER:  while (1) {
         }
 
 
-        print_board($players, $player_active);
+        print draw_board($players);
         print join q[ ], (
-                          qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}. ],
+                          qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
                           $player_active->compose_message($stops),
                           $msg_prank,
                           qq[\n]
@@ -179,22 +180,22 @@ ITER:  while (1) {
   return;
 }
 
-sub print_board { #debug tool
+sub draw_board { #debug tool
   my $players = shift;
-  my $player_active = shift;
-  print q[|];
+  my $board =  q[|];
   for my $cell (1..$player::magic_numbers->{win}) {
-    if ($cell == $players->[0]->position) { #TODO : not scalable for more players, a loop migh suffice instead
-      print q[ <] . $players->[0]->name . q[> ];
+    if ($cell == $players->[0]->position) { #TODO : think how to extend for more than two players, a loop?
+      $board .=  (q[ <] . $players->[0]->name . q[> ]);
     } elsif ($cell == $players->[1]->position) {
-      print q[ <] . $players->[1]->name . q[> ];
+      $board .= (q[ <] . $players->[1]->name . q[> ]);
     } else {
-      print qq[$cell];
+      $board .=  sprintf "%02d", $cell;
     }
-    print q[|];
+    $board .= q[|];
+    if (!($cell % 21)) { $board .= qq[\n|];} #make it wrap
   }
-  print qq[\n];
-  return;
+  $board .= qq[\n];
+  return $board;
 }
 
 sub print_option { #just a placeholder in case if fancier formatting will be introduced
@@ -221,9 +222,7 @@ sub parse_args {
     $args->{action} = $items->[0];
     $args->{player} = $items->[1];
     my ($lower, $upper) = (1, 6);
-    if (! defined $items->[2]) {
-      #roll here
-    } elsif (defined $items->[3]) {
+    if (defined $items->[3]) {
       my @rolls = @{$items}[2..3];
       while (my ($index, $roll) = each @rolls) {
         my $is_between = (sort {$a <=> $b} $lower, $upper, $roll)[1] == $roll;
@@ -288,7 +287,7 @@ $LastChangedRevision$
 
 =head2 get_goose_cells_list - generates sequence 5, 9, 14, 18, 23, 27
 
-=head2 print_board
+=head2 draw_board
 
 =head1 INCOMPATIBILITIES
 

@@ -1,13 +1,10 @@
-# -*- mode: cperl; tab-width: 8; indent-tabs-mode: nil; basic-offset: 2 -*-
-# vim:ts=8:sw=2:et:sta:sts=2
-#########
-# Author: rmp
-#
+#!/usr/bin/env perl
+
 package player;
+
 use strict;
 use warnings;
 use CGI::Carp;
-use Readonly;
 use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
