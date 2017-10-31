@@ -2,19 +2,14 @@
 
 use strict;
 use warnings;
-use DateTime;
 use Getopt::Long;
 use English qw(-no_match_vars);
 #use lib qw(../lib /opt/goose/lib); # if I get to to the point of making proper deb
 use Cwd qw(getcwd);
-use File::Path qw(make_path);
 
 use FindBin; # might or might not be installed
 use File::Spec;
 use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
-
-use Carp;
-use Data::Dumper;
 
 use game;
 use player;
@@ -36,7 +31,7 @@ our  %OPTIONS = (
      add player <player_name>
      move player
      move player <roll1>, <roll2>],
-  rules => q[all the rules about special positions...],
+  rules => q[see https://github.com/xpeppers/goose-game-kata/],
 );
 
   my $opts_parsed = {};
@@ -69,7 +64,6 @@ ITER:  while (1) {
     $user_input_string =~ s/^\W+//smx;
     $user_input_string =~ s/\W+$//smx;
     my $args = parse_args($user_input_string);
-    #print Dumper($args);
     if ($args->{error}) {
       print $args->{error};
       print_option($OPTIONS{help});

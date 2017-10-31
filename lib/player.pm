@@ -4,7 +4,6 @@ package player;
 
 use strict;
 use warnings;
-use CGI::Carp;
 use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
