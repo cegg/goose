@@ -68,21 +68,21 @@ sub turn {
       return qq[add the first player before moving anybody\n];
     } elsif (scalar  @{$self->{players}} < 2) {
       return qq[add the second player before moving anybody\n];
-    } elsif (defined $self->{player_active}
-        && ($args->{player} eq $self->{player_active}->name)) {
+    } elsif (defined $self->player_active
+        && ($args->{player} eq $self->player_active->name)) {
       return join q[ ], (
                           qq["$args->{player}"],
                           q[just moved. it's turn of],
-                          q["] . $self->{player_inactive}->name . q["],
+                          q["] . $self->player_inactive->name . q["],
                           qq[\n]
                           );
     } else {
       if ($args->{player} eq $self->{players}->[0]->name) {
-        $self->{player_active} = $self->{players}->[0];
-        $self->{player_inactive} = $self->{players}->[1]
+        $self->player_active($self->{players}->[0]);
+        $self->player_inactive($self->{players}->[1]);
       } elsif ($args->{player} eq $self->{players}->[1]->name) {
-        $self->{player_active} = $self->{players}->[1];
-        $self->{player_inactive} = $self->{players}->[0];
+        $self->player_active($self->{players}->[1]);
+        $self->player_inactive($self->{players}->[0])
       } else {
         my $available;
         foreach  (@{$self->{players}}) {
@@ -101,15 +101,15 @@ sub turn {
         $args->{roll_2} = int(rand(5)) + 1;
       }
 
-      $self->{player_active}->previous_position($self->{player_active}->position);
-      $self->{player_active}->roll_sum($args->{roll_1} + $args->{roll_2});
-      $self->{player_active}->target_position($self->{player_active}->position + $self->{player_active}->roll_sum);
-      $self->{player_active}->position($self->{player_active}->target_position);
-      my $stops = $self->{player_active}->apply_rules;
+      $self->player_active->previous_position($self->player_active->position);
+      $self->player_active->roll_sum($args->{roll_1} + $args->{roll_2});
+      $self->player_active->target_position($self->player_active->position + $self->player_active->roll_sum);
+      $self->player_active->position($self->player_active->target_position);
+      my $stops = $self->player_active->apply_rules;
 
       if ($stops->[0] >= $game::magic_numbers->{win}) { # 63
         print join q[ ], (
-                          $self->{player_active}->name, qq[moves to $game::magic_numbers->{win}.], $self->{player_active}->name, qq[wins!\n]
+                          $self->player_active->name, qq[moves to $game::magic_numbers->{win}.], $self->player_active->name, qq[wins!\n]
                         );
 
         print qq[GAME OVER\n];
@@ -117,23 +117,23 @@ sub turn {
       }
 
       my $msg_prank = q[];
-      if ($self->{player_active}->position == $self->{player_inactive}->position) { # prank
+      if ($self->player_active->position == $self->player_inactive->position) { # prank
         $msg_prank =  join q[ ],  (
                             q[on],
-                            $self->{player_active}->position,
+                            $self->player_active->position,
                             q[there is],
-                            $self->{player_active}->name,
+                            $self->player_active->name,
                             q[, who returns to ],
-                            $self->{player_active}->previous_position ,
+                            $self->player_active->previous_position ,
                             qq[\n]
                           );
-        $self->{player_inactive}->position($self->{player_active}->previous_position);
+        $self->player_inactive->position($self->player_active->previous_position);
       }
 
       print $self->draw_board();
       return  join q[ ], (
                         qq[$args->{player} rolls $args->{roll_1}, $args->{roll_2}.],
-                        $self->{player_active}->compose_message($stops),
+                        $self->player_active->compose_message($stops),
                         $msg_prank,
                         qq[\n]
                       );
@@ -177,6 +177,26 @@ sub get_goose_cells_list {
     ($index % 2) ? --$y : ++$y;
   }
   return $self->{goose_cells};
+}
+
+sub player_active {
+  my $self = shift;
+  my $player = shift;
+
+  if (defined $player && $player) {
+    $self->{player_active} = $player;
+  }
+  return $self->{player_active};
+}
+
+sub player_inactive {
+  my $self = shift;
+  my $player = shift;
+
+  if (defined $player && $player) {
+    $self->{player_inactive} = $player;
+  }
+  return $self->{player_inactive};
 }
 
 =head1 NAME
