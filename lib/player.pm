@@ -185,6 +185,20 @@ $LastChangedRevision$
 
 =head2 compose_message - turn final state description
 
+=head1 DIAGNOSTICS
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+=head1 DEPENDENCIES
+
+=over
+
+=item strict
+
+=item warnings
+
+=item English
+
 =head1 INCOMPATIBILITIES
 
 =head1 BUGS AND LIMITATIONS

@@ -4,7 +4,6 @@ package game;
 
 use strict;
 use warnings;
-use CGI::Carp;
 use English qw(-no_match_vars);
 use FindBin; # might or might not be installed
 use File::Spec;
@@ -45,14 +44,15 @@ sub turn {
   my $args     = shift;
 
   if ($args->{action} eq q[add]) {
-    if (scalar  @{$self->{players}} < 2) {
-      if (defined $self->{players}->[0] && $self->{players}->[0]->name eq $args->{player} ) {
+    if (scalar  @{$self->players} < 2) {
+      if (defined $self->players->[0] && $self->players->[0]->name eq $args->{player} ) {
         return qq[$args->{player}: already existing player\n];
       } else {
-        push @{$self->{players}}, new player($args->{player});
-        ${$self->{players}}[$#{$self->{players}}]->position(0);
+        $self->add_player(new player($args->{player}));
+        #push @{$self->{players}}, new player($args->{player});
+        ${$self->players}[$#{$self->players}]->position(0);
         my $players_string = q[];
-        foreach  (@{$self->{players}}) { $players_string .= $_->name() . q[ ] };
+        foreach  (@{$self->players}) { $players_string .= $_->name() . q[ ] };
         return join q[ ],  (
                             q[players: ],
                             $players_string,
@@ -64,9 +64,9 @@ sub turn {
       return qq[there are already two players. you can start moving them now\n];
     }
   } elsif ($args->{action} eq q[move]) {
-    if (scalar  @{$self->{players}} < 1) {
+    if (scalar  @{$self->players} < 1) {
       return qq[add the first player before moving anybody\n];
-    } elsif (scalar  @{$self->{players}} < 2) {
+    } elsif (scalar  @{$self->players} < 2) {
       return qq[add the second player before moving anybody\n];
     } elsif (defined $self->player_active
         && ($args->{player} eq $self->player_active->name)) {
@@ -77,15 +77,15 @@ sub turn {
                           qq[\n]
                           );
     } else {
-      if ($args->{player} eq $self->{players}->[0]->name) {
-        $self->player_active($self->{players}->[0]);
-        $self->player_inactive($self->{players}->[1]);
-      } elsif ($args->{player} eq $self->{players}->[1]->name) {
-        $self->player_active($self->{players}->[1]);
-        $self->player_inactive($self->{players}->[0])
+      if ($args->{player} eq $self->players->[0]->name) {
+        $self->player_active($self->players->[0]);
+        $self->player_inactive($self->players->[1]);
+      } elsif ($args->{player} eq $self->players->[1]->name) {
+        $self->player_active($self->players->[1]);
+        $self->player_inactive($self->players->[0])
       } else {
         my $available;
-        foreach  (@{$self->{players}}) {
+        foreach  (@{$self->players}) {
           $available .= ($_->name() . q[ ]);
         }
         return join q[ ], (
@@ -144,14 +144,15 @@ sub turn {
 
 sub draw_board { #debug tool
   my $self    = shift;
-  my $board   =  q[|];
+  my $board   = join q[ ], ( $self->players->[0]->name, q[=<1>], $self->players->[1]->name, qq[=<2>\n\n|] );
+
   for my $cell (1..$game::magic_numbers->{win}) {
-    if ($cell == $self->{players}->[0]->position) { #TODO : think how to extend for more than two players, a loop?
-      $board .=  (q[ <] . $self->{players}->[0]->name . q[> ]);
-    } elsif ($cell == $self->{players}->[1]->position) {
-      $board .= (q[ <] . $self->{players}->[1]->name . q[> ]);
+    if ($cell == $self->players->[0]->position) { #TODO : think how to extend for more than two players, a loop?
+      $board .=  (q[ <1>]);
+    } elsif ($cell == $self->players->[1]->position) {
+      $board .= (q[ <2>]);
     } else {
-      $board .=  sprintf "%02d", $cell;
+      $board .=  join q[], ( q[ ], (sprintf "%02d", $cell), q[ ]);
     }
     $board .= q[|];
     if (!($cell % 21)) { # make it wrap
@@ -177,6 +178,21 @@ sub get_goose_cells_list {
     ($index % 2) ? --$y : ++$y;
   }
   return $self->{goose_cells};
+}
+
+sub add_player {
+  my $self = shift;
+  my $player = shift;
+
+  if (defined $player) {
+    push @{$self->{players}}, $player;
+  }
+  return;
+}
+
+sub players {
+  my $self = shift;
+  return $self->{players};
 }
 
 sub player_active {
@@ -221,6 +237,24 @@ $LastChangedRevision$
 
 =head2 get_goose_cells_list - generates sequence 5, 9, 14, 18, 23, 27
 
+=head1 DIAGNOSTICS
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+=head1 DEPENDENCIES
+
+=over
+
+=item strict
+
+=item warnings
+
+=item English
+
+=item FindBin
+
+=item File::Spec
+
 =head1 INCOMPATIBILITIES
 
 =head1 BUGS AND LIMITATIONS
@@ -230,6 +264,12 @@ $LastChangedRevision$
 $Author: Igor Pozdnyakov,,,$
 
 =head1 LICENSE AND COPYRIGHT
+
+=over
+
+=item strict
+
+=item warnings
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

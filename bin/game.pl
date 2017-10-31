@@ -30,7 +30,11 @@ our  %OPTIONS = (
      available commands:
      add player <player_name>
      move player
-     move player <roll1>, <roll2>],
+     move player <roll1>, <roll2>
+     exit
+     quit
+     ],
+
   rules => q[see https://github.com/xpeppers/goose-game-kata/],
 );
 
