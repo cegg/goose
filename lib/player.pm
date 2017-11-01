@@ -8,8 +8,6 @@ use English qw(-no_match_vars);
 
 our $VERSION = q[0.0.1];
 
-
-
 sub new {
   my $class = shift;
   my $self  = {
@@ -71,13 +69,13 @@ sub apply_rules {
   my $self = shift;
 
   $self->clear_stops;
-  if ($self->position >= $game::magic_numbers->{win}) {
-    $self->add_stop($game::magic_numbers->{win});
-    return [$game::magic_numbers->{win}];
-  } elsif ($self->position == $game::magic_numbers->{bridge}) { # totally random jump
-    $self->add_stop($game::magic_numbers->{bridge});
-    $self->add_stop($game::magic_numbers->{bridge_target});
-    $self->position($game::magic_numbers->{bridge_target});
+  if ($self->position >= $game::magic_numbers{win}) {
+    $self->add_stop($game::magic_numbers{win});
+    return [$game::magic_numbers{win}];
+  } elsif ($self->position == $game::magic_numbers{bridge}) { # totally random jump
+    $self->add_stop($game::magic_numbers{bridge});
+    $self->add_stop($game::magic_numbers{bridge_target});
+    $self->position($game::magic_numbers{bridge_target});
     return $self->stops;
   } else {
     return $self->check_goose_cells($self->position); # recursive check for further jumps
@@ -133,7 +131,7 @@ sub compose_message {
   my $msg = q[];
 
   if (scalar @{$stops}) { # random jumps, second roll. special wording about the bridge
-    if ((scalar @{$stops} == 2) && ($stops->[0] == $game::magic_numbers->{bridge}) && ($stops->[1] == $game::magic_numbers->{bridge_target})) {
+    if ((scalar @{$stops} == 2) && ($stops->[0] == $game::magic_numbers{bridge}) && ($stops->[1] == $game::magic_numbers{bridge_target})) {
       $msg = join q[ ], (
                           $self->name, qq[ moves to the Bridge.],
                           $self->name, qq[jumps to ], $self->position
@@ -142,15 +140,15 @@ sub compose_message {
       my $stop_counter = 0;
 
       foreach my $stop (@{$stops}) {
-        my $again = q[];
+        my $move_clause = q[];
         if ($stop_counter > 0) {
-          $again = q[again and goes];
+          $move_clause = q[again and goes];
         } else {
-           $again = q[];
+          $move_clause = qq[from ] . $self->previous_position;
         }
 
         $msg .= q[ ] . join q[ ], (
-                            $self->name, qq[moves $again to $stop.]
+                            $self->name, qq[moves $move_clause to $stop.]
                           );
         $stop_counter++;
       }
@@ -198,6 +196,8 @@ $LastChangedRevision$
 =item warnings
 
 =item English
+
+=back
 
 =head1 INCOMPATIBILITIES
 

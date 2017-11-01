@@ -8,23 +8,27 @@ use English qw(-no_match_vars);
 use FindBin; # might or might not be installed
 use File::Spec;
 use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
-
+use Readonly;
 
 use player;
 
 our $VERSION = q[0.0.1];
 
-our $magic_numbers = {
+Readonly::Hash our %magic_numbers => (
   win           => 63,
   goose_end     => 27,
   bridge        => 6,
   bridge_target => 12
-};
+);
+
+Readonly::Scalar our $ROLL_LOW  => 1;
+Readonly::Scalar our $ROLL_HIGH => 6;
 
 our @ISA = qw(Exporter);
-
 our @EXPORT_OK = qw(
-                    $magic_numbers
+                    %magic_numbers
+                    $ROLL_LOW
+                    $ROLL_HIGH
                     );
 
 sub new {
@@ -42,8 +46,10 @@ sub turn {
 
   my $self     = shift;
   my $args     = shift;
-
-  if ($args->{action} eq q[add]) {
+  if ($args->{action} eq q[reset]) {
+    $self->players([]);
+    return qq[new game\n];
+  } elsif ($args->{action} eq q[add]) {
     if (scalar  @{$self->players} < 2) {
       if (defined $self->players->[0] && $self->players->[0]->name eq $args->{player} ) {
         return qq[$args->{player}: already existing player\n];
@@ -94,7 +100,7 @@ sub turn {
                             qq[\n]
                           );
       }
-      # user errors end here and the game can selftart
+      # user errors end here and the game can start
 
       if (!defined $args->{roll_1}) { # move on generated dice roll
         $args->{roll_1} = int(rand(5)) + 1;
@@ -107,9 +113,9 @@ sub turn {
       $self->player_active->position($self->player_active->target_position);
       my $stops = $self->player_active->apply_rules;
 
-      if ($stops->[0] >= $game::magic_numbers->{win}) { # 63
+      if ($stops->[0] >= $game::magic_numbers{win}) { # 63
         print join q[ ], (
-                          $self->player_active->name, qq[moves to $game::magic_numbers->{win}.], $self->player_active->name, qq[wins!\n]
+                          $self->player_active->name, qq[moves to $game::magic_numbers{win}.], $self->player_active->name, qq[wins!\n]
                         );
 
         print qq[GAME OVER\n];
@@ -141,12 +147,12 @@ sub turn {
   }
 }
 
-
 sub draw_board { #debug tool
   my $self    = shift;
-  my $board   = join q[ ], ( $self->players->[0]->name, q[=<1>], $self->players->[1]->name, qq[=<2>\n\n|] );
 
-  for my $cell (1..$game::magic_numbers->{win}) {
+  my $board   = join q[ ], ( $self->players->[0]->name, q[=<1>,], $self->players->[1]->name, qq[=<2>\n\n|] );
+
+  for my $cell (1..$game::magic_numbers{win}) {
     if ($cell == $self->players->[0]->position) { #TODO : think how to extend for more than two players, a loop?
       $board .=  (q[ <1>]);
     } elsif ($cell == $self->players->[1]->position) {
@@ -157,7 +163,7 @@ sub draw_board { #debug tool
     $board .= q[|];
     if (!($cell % 21)) { # make it wrap
       $board .= qq[\n];
-      if ($cell != $game::magic_numbers->{win}) {
+      if ($cell != $game::magic_numbers{win}) {
         $board .= qq[|];
       }
     }
@@ -171,7 +177,7 @@ sub get_goose_cells_list {
   my $x = 0;
   my $y = 5;
   my $index = 0;
-  while ($x+$y <= $game::magic_numbers->{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
+  while ($x+$y <= $game::magic_numbers{goose_end}) { # this generates the magic sequence of "goose" cells with the numbers 5 9 14 18 23 27
     $x += $y;
     push @{$self->{goose_cells}}, $x;
     $index += 1;
@@ -192,6 +198,11 @@ sub add_player {
 
 sub players {
   my $self = shift;
+  my $players = shift;
+  if (defined $players && (ref $players eq 'ARRAY')) {
+    $self->{players} =  $players;
+  }
+
   return $self->{players};
 }
 
@@ -231,11 +242,19 @@ $LastChangedRevision$
 
 =head2 new - instantiate player object
 
-=head2 turn - add or move turn
+=head2 turn - "add", "move" or "reset" turn
 
 =head2 draw_board - debug tool
 
 =head2 get_goose_cells_list - generates sequence 5, 9, 14, 18, 23, 27
+
+=head2 players - set or return list of players
+
+=head2 player_active - set or return active_player
+
+=head2 player_inactive - set or return inactive_player
+
+=head2 add_player - push a player object into the list of players
 
 =head1 DIAGNOSTICS
 
@@ -254,6 +273,10 @@ $LastChangedRevision$
 =item FindBin
 
 =item File::Spec
+
+=item Readonly
+
+=back
 
 =head1 INCOMPATIBILITIES
 

@@ -4,9 +4,6 @@ use strict;
 use warnings;
 use Getopt::Long;
 use English qw(-no_match_vars);
-#use lib qw(../lib /opt/goose/lib); # if I get to to the point of making proper deb
-use Cwd qw(getcwd);
-
 use FindBin; # might or might not be installed
 use File::Spec;
 use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
@@ -14,10 +11,10 @@ use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
 use game;
 use player;
 
-our $VERSION = q[0.0.1];
-
 $SIG{INT}  = \&signal_handler;
 $SIG{TERM} = \&signal_handler;
+
+our $VERSION = q[0.0.1];
 
 our  %OPTIONS = (
   help  => qq[$PROGRAM_NAME v$VERSION
@@ -28,14 +25,19 @@ our  %OPTIONS = (
      --rules           # prints rules
 
      available commands:
-     add player <player_name>
-     move player
-     move player <roll1>, <roll2>
-     exit
-     quit
+     >> add player <player_name>
+     >> move player
+     >> move player <roll1>, <roll2>
+     >> reset
+     >> exit
+     >> quit
+
+
+     <player_name> should be \\w+
+     <roll1> and <roll2> should be \\d{$game::ROLL_LOW,$game::ROLL_HIGH}
      ],
 
-  rules => q[see https://github.com/xpeppers/goose-game-kata/],
+  rules => qq[\nsee https://github.com/xpeppers/goose-game-kata/\n],
 );
 
   my $opts_parsed = {};
@@ -63,20 +65,20 @@ sub main {
   our $goose_cells = $game->get_goose_cells_list;
 
 ITER:  while (1) {
-    print q[enter command >> ];
+    print qq[-------------------------------------\nenter command >> ];
     my $user_input_string = <STDIN>;
     $user_input_string =~ s/^\W+//smx;
     $user_input_string =~ s/\W+$//smx;
     my $args = parse_args($user_input_string);
     if ($args->{error}) {
-      print $args->{error};
+      print qq[\n$args->{error}\n];
       print_option($OPTIONS{help});
       next ITER;
     }
 
-    my $turn_error = $game->turn($args);
-    if ($turn_error) {
-      print $turn_error;
+    my $next_iter = $game->turn($args);
+    if ($next_iter) {
+      print qq[\n$next_iter\n];
       next ITER;
     }
   }
@@ -98,7 +100,9 @@ sub parse_args {
 
   my $args = {};
 
-  if (($items->[0] eq q[add])
+  if (!$user_input_string) {
+    $args->{error} = qq[no valid command was entered. here's help: \n];
+  } elsif (($items->[0] eq q[add])
       && defined $items->[1]
       && ($items->[1] eq q[player])
       && defined $items->[2]) {
@@ -107,33 +111,32 @@ sub parse_args {
   } elsif ($items->[0] eq q[move]) {
     $args->{action} = $items->[0];
     $args->{player} = $items->[1];
-    my ($lower, $upper) = (1, 6);
     if (defined $items->[2] && !defined $items->[3]) {
-        $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
+        $args->{error} = qq[move command should end with two integers from $game::ROLL_LOW to $game::ROLL_HIGH each separated by white space or a comma\n];
     } elsif (defined $items->[3]) {
       my @rolls = @{$items}[2..3];
       while (my ($index, $roll) = each @rolls) {
-        my $is_between = (sort {$a <=> $b} $lower, $upper, $roll)[1] == $roll;
+        my $is_between = (sort {$a <=> $b} $game::ROLL_LOW, $game::ROLL_HIGH, $roll)[1] == $roll;
         if (!$is_between) {
-          $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
+          $args->{error} = qq[move command should end with two integers from $game::ROLL_LOW to $game::ROLL_HIGH each separated by white space or a comma\n];
           last;
         } else {
           $args->{ 'roll_' . ++$index } = $roll;
         }
       }
-    #} else {
-    #  $args->{error} = qq[move command should end with two integers from 1 to 6 each separated by white space or a comma\n];
     }
+  } elsif ($items->[0] eq q[reset]) {
+    $args->{action} = $items->[0];
   } elsif ($items->[0] eq q[exit] || $items->[0] eq q[quit]) {
     exit;
   } else {
-    $args->{error} = qq[command should start with either "add player" or "move", follwed by player's name\n];
+    $args->{error} = qq[game command should start with either "add player" or "move", follwed by player's name\nother options are reset, exit and quit.\n];
   }
   return $args;
 }
 
 sub signal_handler {
-  print "exiting\n";
+  print "exiting. bye\n";
   exit;
 }
 
@@ -150,6 +153,8 @@ $LastChangedRevision$
 
 =head1 DESCRIPTION
 
+xpeppers kata take on the classic game of the goose
+
 =head1 SUBROUTINES/METHODS
 
 =head2 parse_args - parse user input command
@@ -161,6 +166,20 @@ $LastChangedRevision$
 =head1 INCOMPATIBILITIES
 
 =head1 BUGS AND LIMITATIONS
+
+=over
+
+=item strict
+
+=item warnings
+
+=item English
+
+=item FindBin
+
+=item File::Spec
+
+=back
 
 =head1 AUTHOR
 
